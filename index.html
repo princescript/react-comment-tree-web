@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>react-comment-tree — Threaded comments for React</title>
+<meta name="description" content="A headless, TypeScript-first React component for nested comment threads. Bring your own backend, data model, and auth. We handle the tree, the UI, and the interactions." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f8fafc;
+    --paper-soft: #f1f5f9;
+    --paper-card: #ffffff;
+    --ink: #0f172a;
+    --ink-soft: #1e293b;
+    --ink-mute: #475569;
+    --muted: #64748b;
+    --muted-soft: #94a3b8;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-soft: #eef2ff;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+
+    --code-bg: #0f172a;
+    --code-bg-2: #1e293b;
+    --code-text: #e2e8f0;
+    --code-muted: #94a3b8;
+    --code-border: #334155;
+
+    --header-h: 68px;
+    --sidebar-w: 288px;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --radius-lg: 22px;
+
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 8px 24px -6px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+    --shadow-lg: 0 28px 64px -16px rgba(15, 23, 42, 0.18), 0 10px 28px -10px rgba(15, 23, 42, 0.08);
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: calc(var(--header-h) + 24px);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--ink-mute);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    line-height: 1.62;
+  }
+
+  a { color: var(--accent); text-decoration: none; transition: color 0.15s ease; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; color: var(--accent-hover); }
+
+  /* ============ Header ============ */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--header-h);
+    background: rgba(248, 250, 252, 0.82);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .site-header-inner {
+    height: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .brand:hover { text-decoration: none; }
+  .brand-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: linear-gradient(150deg, #0f172a 0%, #4338ca 55%, #6366f1 130%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-family: var(--font-sans);
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: -0.03em;
+    box-shadow:
+      0 6px 16px -4px rgba(99, 102, 241, 0.4),
+      inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+  .brand-name {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 14.5px;
+    letter-spacing: -0.018em;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .brand-sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.15;
+    margin-top: 1px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .version-badge {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(99, 102, 241, 0.18);
+  }
+  .menu-toggle {
+    display: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 1px solid var(--border);
+    background: var(--paper-card);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-mute);
+    transition: all 0.15s ease;
+  }
+  .menu-toggle:hover {
+    background: var(--paper-soft);
+    border-color: var(--border-strong);
+  }
+
+  /* ============ Layout ============ */
+  .layout {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 40px 28px 96px;
+    display: grid;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    gap: 56px;
+  }
+
+  /* ============ Sidebar ============ */
+  .sidebar {
+    position: sticky;
+    top: calc(var(--header-h) + 28px);
+    align-self: start;
+    max-height: calc(100vh - var(--header-h) - 56px);
+    overflow-y: auto;
+    padding-right: 10px;
+    font-size: 13.5px;
+  }
+  .sidebar::-webkit-scrollbar { width: 5px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+
+  .nav-group { margin-bottom: 26px; }
+  .nav-group-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted-soft);
+    margin: 0 0 8px 14px;
+  }
+  .nav-list { list-style: none; margin: 0; padding: 0; }
+  .nav-list a {
+    display: block;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    color: var(--ink-mute);
+    text-decoration: none;
+    font-weight: 450;
+    letter-spacing: -0.005em;
+    transition: background 0.15s ease, color 0.15s ease;
+    position: relative;
+  }
+  .nav-list a:hover {
+    background: var(--paper-soft);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .nav-list a.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .nav-list a.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* ============ Main ============ */
+  .main { min-width: 0; max-width: 880px; }
+
+  /* Hero */
+  .hero {
+    padding: 4px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 56px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    margin: 0 0 20px;
+    color: var(--ink);
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(120deg, var(--accent) 0%, #8b5cf6 60%, #06b6d4 120%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .hero p {
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink-mute);
+    margin: 0 0 28px;
+    max-width: 640px;
+    letter-spacing: -0.008em;
+  }
+  .hero-install {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--code-bg);
+    color: var(--code-text);
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 13px 14px 13px 18px;
+    border-radius: var(--radius);
+    box-shadow:
+      0 20px 40px -16px rgba(15, 23, 42, 0.4),
+      0 4px 12px -4px rgba(15, 23, 42, 0.2),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    border: 1px solid var(--code-border);
+    letter-spacing: -0.005em;
+  }
+  .hero-install .prompt { color: #64748b; user-select: none; }
+  .hero-install button {
+    background: rgba(255,255,255,0.06);
+    color: #cbd5e1;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 11.5px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .hero-install button:hover {
+    background: rgba(255,255,255,0.11);
+    color: #f8fafc;
+    border-color: rgba(255,255,255,0.12);
+  }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .pill {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.002em;
+    color: var(--ink-mute);
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 999px;
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* Hero screenshot */
+  .screenshot-frame {
+    margin: 32px 0 0;
+    padding: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--paper-card);
+    box-shadow: var(--shadow-lg);
+  }
+  .screenshot-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--paper-soft);
+    border-bottom: 1px solid var(--border);
+  }
+  .screenshot-bar .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .screenshot-bar .dot.red    { background: #ff5f57; }
+  .screenshot-bar .dot.yellow { background: #febc2e; }
+  .screenshot-bar .dot.green  { background: #28c840; }
+  .screenshot-bar .url {
+    margin-left: 8px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    letter-spacing: -0.002em;
+  }
+  .screenshot-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Quickstart card */
+  .quickstart-card {
+    margin: 0 0 40px;
+    padding: 28px 30px;
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+  }
+  .quickstart-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+  }
+  .quickstart-card h3 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.028em;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .quickstart-card .sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 0 20px;
+    letter-spacing: -0.004em;
+  }
+
+  /* Sections */
+  section { margin-bottom: 68px; scroll-margin-top: calc(var(--header-h) + 28px); }
+  section h2 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+  section h3 {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.018em;
+    margin: 36px 0 10px;
+    color: var(--ink);
+  }
+  section p {
+    color: var(--ink-mute);
+    margin: 0 0 16px;
+    font-size: 15px;
+    line-height: 1.68;
+    letter-spacing: -0.004em;
+  }
+  section ul, section ol {
+    color: var(--ink-mute);
+    padding-left: 22px;
+    margin: 0 0 18px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  section li { margin-bottom: 6px; }
+  section li::marker { color: var(--muted-soft); }
+  section li code, section p code, section td code {
+    background: var(--paper-soft);
+    border: 1px solid var(--border);
+    padding: 1.5px 6px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.83em;
+    color: var(--accent);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink-mute);
+    margin-bottom: 22px;
+    letter-spacing: -0.008em;
+  }
+
+  /* Code blocks */
+  .code-block {
+    position: relative;
+    margin: 0 0 22px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--code-bg);
+    box-shadow:
+      0 18px 40px -18px rgba(15, 23, 42, 0.3),
+      0 4px 12px -4px rgba(15, 23, 42, 0.15);
+    border: 1px solid var(--code-border);
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--code-bg-2);
+    border-bottom: 1px solid var(--code-border);
+    font-size: 11.5px;
+    font-family: var(--font-mono);
+    color: var(--code-muted);
+    letter-spacing: 0.02em;
+  }
+  .code-lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+  }
+  .code-lang::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  }
+  .copy-btn {
+    background: rgba(255,255,255,0.04);
+    color: #94a3b8;
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 5px 11px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .copy-btn:hover {
+    background: rgba(255,255,255,0.09);
+    color: #e2e8f0;
+    border-color: rgba(255,255,255,0.13);
+  }
+  .copy-btn.copied {
+    background: rgba(16, 185, 129, 0.14);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+  .code-block pre {
+    margin: 0;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.72;
+    color: var(--code-text);
+    tab-size: 2;
+    letter-spacing: -0.002em;
+  }
+  .code-block code { font-family: inherit; white-space: pre; }
+
+  .tok-comment { color: #64748b; font-style: italic; }
+  .tok-string  { color: #c4b5fd; }
+  .tok-keyword { color: #a5b4fc; }
+  .tok-number  { color: #fdba74; }
+  .tok-tag     { color: #7dd3fc; }
+
+  pre.diagram {
+    background: var(--paper-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--ink-mute);
+    overflow-x: auto;
+    margin: 0 0 22px;
+    letter-spacing: -0.002em;
+  }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 0 0 26px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--paper-card);
+    box-shadow: var(--shadow-xs);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td {
+    text-align: left;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: var(--paper-soft);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+  }
+  tr:last-child td { border-bottom: none; }
+  td { color: var(--ink-mute); letter-spacing: -0.005em; }
+  td.yes { color: #15803d; font-weight: 600; text-align: center; }
+  td.no  { color: #b91c1c; font-weight: 600; text-align: center; }
+
+  /* Feature grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+    margin: 0 0 26px;
+  }
+  .feature-card {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--paper-card);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    box-shadow: var(--shadow-xs);
+  }
+  .feature-card:hover {
+    border-color: rgba(99, 102, 241, 0.28);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .feature-card .emoji {
+    font-size: 18px;
+    margin-bottom: 8px;
+    display: block;
+    filter: saturate(0.9);
+  }
+  .feature-card .title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.008em;
+  }
+  .feature-card .desc {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: -0.002em;
+    line-height: 1.5;
+  }
+
+  /* Callout */
+  .callout {
+    display: flex;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: var(--radius);
+    margin: 0 0 22px;
+    font-size: 14px;
+    line-height: 1.65;
+    letter-spacing: -0.004em;
+  }
+  .callout-info {
+    background: var(--accent-soft);
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    color: #3730a3;
+  }
+  .callout-warn {
+    background: #fef8ec;
+    border: 1px solid #f5e0b7;
+    color: #78350f;
+  }
+  .callout-icon { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+  .callout p { margin: 0; color: inherit; }
+
+  /* Footer */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 28px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: -0.004em;
+    background: var(--paper-soft);
+  }
+  .site-footer a { color: var(--ink-mute); }
+
+  /* Backdrop for mobile sidebar */
+  .backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 39;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .backdrop.show { display: block; opacity: 1; }
+
+  /* ============ Responsive ============ */
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; gap: 24px; padding: 28px 22px 72px; }
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 320px;
+      max-height: none;
+      background: var(--paper);
+      z-index: 40;
+      padding: 88px 24px 28px;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: var(--shadow-lg);
+      border-right: 1px solid var(--border);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .menu-toggle { display: inline-flex; }
+    .brand-sub { display: none; }
+    .hero h1 { font-size: 44px; }
+  }
+
+  @media (max-width: 640px) {
+    .site-header-inner { padding: 0 18px; }
+    .version-badge { display: none; }
+    .hero h1 { font-size: 34px; letter-spacing: -0.03em; }
+    .hero p { font-size: 15.5px; }
+    section h2 { font-size: 25px; }
+    .code-block pre { font-size: 12px; padding: 16px; }
+    .layout { padding: 24px 18px 64px; }
+    .hero-install { font-size: 12.5px; padding: 11px 12px 11px 15px; gap: 10px; }
+    .quickstart-card { padding: 22px 20px; }
+  }
+
+  ::selection { background: rgba(99, 102, 241, 0.2); color: #312e81; }
+
+  :focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.4);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="#top" class="brand">
+      <div class="brand-logo">R</div>
+      <div>
+        <div class="brand-name">react-comment-tree</div>
+        <div class="brand-sub">Threaded comments for React</div>
+      </div>
+    </a>
+    <div class="header-right">
+      <span class="version-badge">v0.0.1 · MIT</span>
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="backdrop" id="backdrop"></div>
+
+<div class="layout" id="top">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="nav-group">
+      <div class="nav-group-title">Getting started</div>
+      <ul class="nav-list">
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#installation">Installation</a></li>
+        <li><a href="#quickstart">Quickstart</a></li>
+        <li><a href="#how-it-works">How it fits your stack</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Core concepts</div>
+      <ul class="nav-list">
+        <li><a href="#data-model">Data model</a></li>
+        <li><a href="#ids">IDs</a></li>
+        <li><a href="#nested-comments">Nested comments</a></li>
+        <li><a href="#sorting">Sorting</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">API reference</div>
+      <ul class="nav-list">
+        <li><a href="#props">Props</a></li>
+        <li><a href="#accessors">Accessors</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#behavior">Behavior</a></li>
+        <li><a href="#callbacks">Callbacks</a></li>
+        <li><a href="#renderers">Renderers</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Styling</div>
+      <ul class="nav-list">
+        <li><a href="#styling">Styling</a></li>
+        <li><a href="#css-variables">CSS variables</a></li>
+        <li><a href="#tailwind">Tailwind CSS</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Guides</div>
+      <ul class="nav-list">
+        <li><a href="#state">State management</a></li>
+        <li><a href="#api">API integration</a></li>
+        <li><a href="#auth">Authentication</a></li>
+        <li><a href="#validation">Validation</a></li>
+        <li><a href="#errors">Error handling</a></li>
+        <li><a href="#deletion">Deletion strategies</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Examples</div>
+      <ul class="nav-list">
+        <li><a href="#example-api">API-backed app</a></li>
+        <li><a href="#example-minimal">Minimal integration</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Reference</div>
+      <ul class="nav-list">
+        <li><a href="#exports">Package exports</a></li>
+        <li><a href="#typescript">TypeScript</a></li>
+        <li><a href="#compat">Compatibility</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#performance">Performance</a></li>
+        <li><a href="#responsibility">Responsibility matrix</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Development</div>
+      <ul class="nav-list">
+        <li><a href="#development">Local development</a></li>
+        <li><a href="#testing">Testing</a></li>
+        <li><a href="#publishing">Publishing</a></li>
+        <li><a href="#contributing">Contributing</a></li>
+        <li><a href="#license">License</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Hero -->
+    <div class="hero">
+      <h1>Ship threaded discussions <em>in minutes</em>.</h1>
+      <p>A headless, TypeScript-first React component for nested comments. Bring your own backend, data model, and auth — we handle the tree, the UI, and the interactions.</p>
+      <div class="hero-install">
+        <span class="prompt">$</span>
+        <span id="installCmd">npm install react-comment-tree</span>
+        <button data-copy-target="installCmd">Copy</button>
+      </div>
+      <div class="pills">
+        <span class="pill">React 18 &amp; 19</span>
+        <span class="pill">TypeScript</span>
+        <span class="pill">Backend agnostic</span>
+        <span class="pill">Tree-shakable</span>
+        <span class="pill">Dark mode</span>
+        <span class="pill">Zero lock-in</span>
+      </div>
+
+      <!-- Screenshot -->
+      <div class="screenshot-frame">
+        <div class="screenshot-bar">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="url">localhost:5173 — consumer demo</span>
+        </div>
+        <img src="demo.png" alt="react-comment-tree rendering a nested comment thread with avatars, timestamps, and like / reply / edit / delete actions." />
+      </div>
+    </div>
+
+    <!-- Quickstart card -->
+    <div class="quickstart-card">
+      <h3>Get running in 60 seconds</h3>
+      <p class="sub">Install the package, drop in the component, and pass your comments. That's the whole integration.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>import { CommentTree } from "react-comment-tree";
+import "react-comment-tree/style.css";
+
+&lt;CommentTree&lt;MyComment&gt;
+  comments={comments}
+  currentUserId={currentUserId}
+
+  accessors={{
+    getId:       (c) =&gt; c.commentId,
+    getParentId: (c) =&gt; c.parentCommentId,
+    getAuthor:   (c) =&gt; ({ id: c.userId, name: c.userName, avatar: c.userAvatar }),
+    getContent:  (c) =&gt; c.content,
+    getCreatedAt:(c) =&gt; c.createdAt,
+    getLikes:    (c) =&gt; c.likes,
+    getDislikes: (c) =&gt; c.dislikes ?? 0,
+  }}
+
+  actions={{
+    onAddComment: handleAddComment,
+    onReply:      handleReply,
+    onEdit:       handleEdit,
+    onDelete:     handleDelete,
+    onLike:       handleLike,
+    onDislike:    handleDislike,
+  }}
+/&gt;</code></pre>
+      </div>
+    </div>
+
+    <section id="introduction">
+      <h2>Introduction</h2>
+      <p class="lead">A component that renders a nested comment tree — nothing more, nothing less. It doesn't own your data, make API calls, or assume anything about your comment shape.</p>
+      <p><strong>react-comment-tree</strong> takes a flat array of comments plus a set of mapping functions and builds the tree for you. Content is rendered as text, the markup is semantic, and every visual is exposed through CSS variables scoped under <code>.rct</code>.</p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <span class="emoji">🌳</span>
+          <div class="title">Nested trees</div>
+          <div class="desc">Unlimited reply depth from a flat list.</div>
+        </div>
+        <div class="feature-card">
+          <span class="emoji">🔌</span>
+          <div class="title">Backend agnostic</div>
+          <div class="desc">Bring your own data shape, API, and IDs.</div>
+        </div>
+        <div class="feature-card">
+          <span class="emoji">🎨</span>
+          <div class="title">Themable</div>
+          <div class="desc">Light / dark / system plus CSS variables.</div>
+        </div>
+        <div class="feature-card">
+          <span class="emoji">⚙️</span>
+          <div class="title">Controlled</div>
+          <div class="desc">Toggle actions via <code>features</code>.</div>
+        </div>
+        <div class="feature-card">
+          <span class="emoji">🧩</span>
+          <div class="title">Renderers</div>
+          <div class="desc">Override header and action rows.</div>
+        </div>
+        <div class="feature-card">
+          <span class="emoji">📦</span>
+          <div class="title">Typed</div>
+          <div class="desc">Full generic support for your model.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="installation">
+      <h2>Installation</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+        <pre><code>npm install react-comment-tree</code></pre>
+      </div>
+      <p>Then import the component and its stylesheet:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>import { CommentTree } from "react-comment-tree";
+import "react-comment-tree/style.css";</code></pre>
+      </div>
+      <p>The stylesheet is imported separately so your app decides when and where the library styles are loaded.</p>
+    </section>
+
+    <section id="quickstart">
+      <h2>Quickstart</h2>
+      <p>The component works with any comment shape. You tell it how to read your data through <code>accessors</code>.</p>
+
+      <h3>1. Define your comment shape</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn">Copy</button></div>
+        <pre><code>interface MyComment {
+  commentId: string;
+  parentCommentId: string | null;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+  likes: number;
+  dislikes?: number;
+}</code></pre>
+      </div>
+
+      <h3>2. Map it into the component</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>&lt;CommentTree&lt;MyComment&gt;
+  comments={comments}
+  currentUserId={currentUserId}
+
+  accessors={{
+    getId:        (c) =&gt; c.commentId,
+    getParentId:  (c) =&gt; c.parentCommentId,
+    getAuthor:    (c) =&gt; ({
+      id: c.userId,
+      name: c.userName,
+      avatar: c.userAvatar,
+    }),
+    getContent:   (c) =&gt; c.content,
+    getCreatedAt: (c) =&gt; c.createdAt,
+    getUpdatedAt: (c) =&gt; c.updatedAt,
+    getLikes:     (c) =&gt; c.likes,
+    getDislikes:  (c) =&gt; c.dislikes ?? 0,
+  }}
+
+  actions={{
+    onAddComment: handleAddComment,
+    onReply:      handleReply,
+    onEdit:       handleEdit,
+    onDelete:     handleDelete,
+    onLike:       handleLike,
+    onDislike:    handleDislike,
+  }}
+/&gt;</code></pre>
+      </div>
+
+      <h3>3. Wire up your callbacks</h3>
+      <p>Each callback receives the relevant comment object and optional content. Return <code>void</code> or <code>Promise&lt;void&gt;</code>. Your app owns persistence, validation, and authorization.</p>
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <p>That's the core integration. Your app owns the data and persistence. <code>react-comment-tree</code> owns the tree UI and the interaction callbacks.</p>
+      </div>
+    </section>
+
+    <section id="how-it-works">
+      <h2>How it fits your stack</h2>
+      <p>The package follows a strict separation of responsibilities:</p>
+      <pre class="diagram">┌──────────────────────────────┐
+│       Your application       │
+│  Auth · API · DB · State     │
+└──────────────┬───────────────┘
+               │ comments + callbacks
+               ▼
+┌──────────────────────────────┐
+│      react-comment-tree      │
+│  Build tree · Render UI      │
+│  Handle local interaction    │
+└──────────────┬───────────────┘
+               │
+               ▼
+          Your callbacks</pre>
+      <p>The package never makes API requests and never stores comments.</p>
+    </section>
+
+    <section id="data-model">
+      <h2>Data model</h2>
+      <p>The component is generic over <code>TComment</code>. Any interface works — the <code>accessors</code> object tells it how to read your fields.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>// Your backend returns snake_case — no problem.
+interface ApiComment {
+  id: number;
+  parent_id: number | null;
+  user_id: number;
+  username: string;
+  avatar_url?: string;
+  message: string;
+  created_at: string;
+  like_count: number;
+  dislike_count: number;
+}
+
+&lt;CommentTree&lt;ApiComment&gt;
+  comments={comments}
+  accessors={{
+    getId:        (c) =&gt; String(c.id),
+    getParentId:  (c) =&gt; c.parent_id === null ? null : String(c.parent_id),
+    getAuthor:    (c) =&gt; ({ id: String(c.user_id), name: c.username, avatar: c.avatar_url }),
+    getContent:   (c) =&gt; c.message,
+    getCreatedAt: (c) =&gt; c.created_at,
+    getLikes:     (c) =&gt; c.like_count,
+    getDislikes:  (c) =&gt; c.dislike_count,
+  }}
+/&gt;</code></pre>
+      </div>
+    </section>
+
+    <section id="ids">
+      <h2>IDs</h2>
+      <p>IDs are treated as opaque strings. Any of these are valid: <code>"123"</code>, <code>"CMT-001"</code>, <code>"550e8400-e29b-41d4-a716-446655440000"</code>. The only rule is uniqueness within the supplied list.</p>
+      <p>If your backend uses numeric IDs, convert them:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>getId: (c) =&gt; String(c.id)</code></pre>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <p>The package does not generate comment IDs. That's your app's or your backend's job.</p>
+      </div>
+    </section>
+
+    <section id="nested-comments">
+      <h2>Nested comments</h2>
+      <p>Arbitrary depth — the tree is built from <code>getId</code> and <code>getParentId</code>. You never construct nested objects yourself.</p>
+      <pre class="diagram">Comment
+├── Reply
+│   ├── Reply
+│   │   └── Reply
+│   └── Reply
+└── Reply
+    └── Reply</pre>
+    </section>
+
+    <section id="sorting">
+      <h2>Sorting</h2>
+      <p>Built in. Users pick <strong>Newest</strong> or <strong>Oldest</strong>; the sort uses the value returned by <code>getCreatedAt</code>. The original array is never mutated — the tree copies internally.</p>
+    </section>
+
+    <section id="props">
+      <h2>Props</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Prop</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>comments</code></td><td><code>TComment[]</code></td><td class="yes">Yes</td><td>The complete flat list of comments (roots + replies).</td></tr>
+            <tr><td><code>accessors</code></td><td><code>Accessors&lt;TComment&gt;</code></td><td class="yes">Yes</td><td>Functions that read fields from your comment model.</td></tr>
+            <tr><td><code>currentUserId</code></td><td><code>string</code></td><td>No</td><td>Used to decide whether to show Edit / Delete.</td></tr>
+            <tr><td><code>className</code></td><td><code>string</code></td><td>No</td><td>Extra class on the root <code>&lt;section class="rct"&gt;</code>.</td></tr>
+            <tr><td><code>theme</code></td><td><code>"light" | "dark" | "system"</code></td><td>No</td><td>Theme. Defaults to <code>"light"</code>.</td></tr>
+            <tr><td><code>features</code></td><td><code>Features</code></td><td>No</td><td>Show/hide individual actions.</td></tr>
+            <tr><td><code>behavior</code></td><td><code>Behavior</code></td><td>No</td><td>Interaction tweaks.</td></tr>
+            <tr><td><code>actions</code></td><td><code>Actions&lt;TComment&gt;</code></td><td>No</td><td>Event handlers.</td></tr>
+            <tr><td><code>renderers</code></td><td><code>Renderers&lt;TComment&gt;</code></td><td>No</td><td>Override the header and action rows.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="accessors">
+      <h2>Accessors</h2>
+      <p>Tell the component how to read your model. Required accessors are marked <strong>Yes</strong>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Accessor</th><th>Signature</th><th>Required</th><th>Returns</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>getId</code></td><td><code>(c) =&gt; string</code></td><td class="yes">Yes</td><td>Unique comment ID.</td></tr>
+            <tr><td><code>getParentId</code></td><td><code>(c) =&gt; string | null</code></td><td class="yes">Yes</td><td>Parent ID or <code>null</code> for roots.</td></tr>
+            <tr><td><code>getAuthor</code></td><td><code>(c) =&gt; { id, name, avatar? }</code></td><td class="yes">Yes</td><td>Author info.</td></tr>
+            <tr><td><code>getContent</code></td><td><code>(c) =&gt; string</code></td><td class="yes">Yes</td><td>Comment text (rendered as text).</td></tr>
+            <tr><td><code>getCreatedAt</code></td><td><code>(c) =&gt; string | number | Date</code></td><td class="yes">Yes</td><td>Creation timestamp.</td></tr>
+            <tr><td><code>getUpdatedAt</code></td><td><code>(c) =&gt; string | number | Date | undefined</code></td><td>No</td><td>Drives the "(edited)" tag.</td></tr>
+            <tr><td><code>getLikes</code></td><td><code>(c) =&gt; number</code></td><td class="yes">Yes</td><td>Like count.</td></tr>
+            <tr><td><code>getDislikes</code></td><td><code>(c) =&gt; number</code></td><td>No</td><td>Dislike count. Defaults to <code>0</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="features">
+      <h2>Features</h2>
+      <p>Show or hide individual actions. Any omitted key defaults to <code>true</code>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>features={{
+  like: true,
+  dislike: true,
+  reply: true,
+  edit: true,
+  delete: true,
+}}
+
+// Example: read-only view
+features={{ reply: false, edit: false, delete: false }}</code></pre>
+      </div>
+      <p>Hide an action and its UI element disappears — including the reply input.</p>
+    </section>
+
+    <section id="behavior">
+      <h2>Behavior</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>closeReplyInputAfterSubmit</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Close the reply box after a successful submit. Set <code>false</code> to keep it open.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>behavior={{
+  closeReplyInputAfterSubmit: false,
+}}</code></pre>
+      </div>
+    </section>
+
+    <section id="callbacks">
+      <h2>Callbacks</h2>
+      <p>Every callback may return <code>void</code> or <code>Promise&lt;void&gt;</code>, so both local-state and API-backed apps fit.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Callback</th><th>Signature</th><th>Fires when</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>onAddComment</code></td><td><code>(content: string) =&gt; void | Promise&lt;void&gt;</code></td><td>User submits a new root comment.</td></tr>
+            <tr><td><code>onReply</code></td><td><code>(parent, content) =&gt; void | Promise&lt;void&gt;</code></td><td>User submits a reply.</td></tr>
+            <tr><td><code>onEdit</code></td><td><code>(comment, content) =&gt; void | Promise&lt;void&gt;</code></td><td>User edits their own comment.</td></tr>
+            <tr><td><code>onDelete</code></td><td><code>(comment) =&gt; void | Promise&lt;void&gt;</code></td><td>User deletes their own comment.</td></tr>
+            <tr><td><code>onLike</code></td><td><code>(comment) =&gt; void | Promise&lt;void&gt;</code></td><td>User likes a comment.</td></tr>
+            <tr><td><code>onDislike</code></td><td><code>(comment) =&gt; void | Promise&lt;void&gt;</code></td><td>User dislikes a comment.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>API-backed handlers</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>const handleAddComment = async (content: string) =&gt; {
+  const created = await api.createComment({ content });
+  setComments((prev) =&gt; [...prev, created]);
+};
+
+const handleReply = async (parent: MyComment, content: string) =&gt; {
+  const reply = await api.createReply({
+    parentCommentId: parent.commentId,
+    content,
+  });
+  setComments((prev) =&gt; [...prev, reply]);
+};
+
+const handleDelete = async (comment: MyComment) =&gt; {
+  await api.deleteComment(comment.commentId);
+  await reloadComments();
+};</code></pre>
+      </div>
+    </section>
+
+    <section id="renderers">
+      <h2>Renderers</h2>
+      <p>Two optional render functions let you replace the built-in header and action rows. Both receive the <strong>original</strong> consumer comment object — never a normalized clone.</p>
+
+      <h3>renderers.header</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>renderers={{
+  header: (comment, author) =&gt; (
+    &lt;div className="rct-comment-header"&gt;
+      &lt;img src={author.avatar} alt="" className="rct-avatar" /&gt;
+      &lt;strong&gt;{author.name}&lt;/strong&gt;
+      &lt;time dateTime={comment.createdAt}&gt;{timeAgo(comment.createdAt)}&lt;/time&gt;
+      {comment.updatedAt &amp;&amp; &lt;span className="rct-edited-tag"&gt;(edited)&lt;/span&gt;}
+    &lt;/div&gt;
+  ),
+}}</code></pre>
+      </div>
+
+      <h3>renderers.actions</h3>
+      <p>Receives the comment and an action-context object with handlers that reflect your current <code>features</code> and <code>actions</code>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn">Copy</button></div>
+        <pre><code>interface CommentActionContext {
+  onLike?:    () =&gt; void;
+  onDislike?: () =&gt; void;
+  onReply?:   () =&gt; void;
+  onEdit?:    () =&gt; void;
+  onDelete?:  () =&gt; void;
+
+  likes:      number;
+  dislikes:   number;
+  isOwner:    boolean;
+  isReplying: boolean;
+  isEditing:  boolean;
+}</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>renderers={{
+  actions: (_comment, ctx) =&gt; (
+    &lt;div className="rct-actions"&gt;
+      {ctx.onLike &amp;&amp; (
+        &lt;button className="rct-like-button" onClick={ctx.onLike}&gt;
+          ♥ {ctx.likes}
+        &lt;/button&gt;
+      )}
+      {ctx.onReply &amp;&amp; (
+        &lt;button
+          className="rct-reply-button"
+          aria-expanded={ctx.isReplying}
+          onClick={ctx.onReply}
+        &gt;
+          Reply
+        &lt;/button&gt;
+      )}
+      {ctx.isOwner &amp;&amp; ctx.onEdit &amp;&amp; (
+        &lt;button className="rct-edit-button" onClick={ctx.onEdit}&gt;Edit&lt;/button&gt;
+      )}
+      {ctx.isOwner &amp;&amp; ctx.onDelete &amp;&amp; (
+        &lt;button className="rct-delete-button" onClick={ctx.onDelete}&gt;Delete&lt;/button&gt;
+      )}
+    &lt;/div&gt;
+  ),
+}}</code></pre>
+      </div>
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <p>Handlers are omitted from the context when the corresponding feature is disabled or the callback was not provided. That's the recommended way to conditionally render your custom buttons.</p>
+      </div>
+    </section>
+
+    <section id="styling">
+      <h2>Styling</h2>
+      <p>All styles are scoped under <code>.rct</code>. Add a class for your app's overrides:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>&lt;CommentTree className="my-comment-tree" ... /&gt;</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">css</span><button class="copy-btn">Copy</button></div>
+        <pre><code>.my-comment-tree {
+  --rct-primary: #6366f1;
+  --rct-primary-hover: #4f46e5;
+  --rct-avatar-size: 42px;
+}
+
+.my-comment-tree .rct-comment {
+  padding: 16px;
+  border-radius: 12px;
+}</code></pre>
+      </div>
+    </section>
+
+    <section id="css-variables">
+      <h2>CSS variables</h2>
+      <p>Every visual token the library uses is overridable. The full set lives under <code>.rct</code> — the common ones:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">css</span><button class="copy-btn">Copy</button></div>
+        <pre><code>.my-comment-tree {
+  /* Surfaces */
+  --rct-background: #ffffff;
+  --rct-surface: #ffffff;
+  --rct-surface-hover: #f2f2f2;
+
+  /* Text */
+  --rct-text: #000000;
+  --rct-text-secondary: #737373;
+  --rct-text-muted: #8e8e8e;
+
+  /* Borders */
+  --rct-border: #efefef;
+  --rct-border-strong: #dbdbdb;
+
+  /* Brand */
+  --rct-primary: #0095f6;
+  --rct-primary-hover: #1877f2;
+
+  /* Action colours */
+  --rct-like-color: #dc2626;
+  --rct-like-hover: #b91c1c;
+  --rct-dislike-color: #475569;
+  --rct-reply-color: #4f46e5;
+  --rct-edit-color: #ca8a04;
+  --rct-delete-color: #dc2626;
+
+  /* Avatar */
+  --rct-avatar-size: 32px;
+  --rct-avatar-size-lg: 40px;
+
+  /* Header metadata */
+  --rct-edited-color: #94a3b8;
+
+  /* Icons */
+  --rct-icon-size: 16px;
+
+  /* Radius */
+  --rct-radius: 8px;
+  --rct-radius-lg: 18px;
+  --rct-radius-pill: 9999px;
+}</code></pre>
+      </div>
+    </section>
+
+    <section id="tailwind">
+      <h2>Tailwind CSS</h2>
+      <p>Use Tailwind for the surrounding layout — the library keeps its own scoped styles.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>&lt;div className="mx-auto w-full max-w-3xl px-4 py-10"&gt;
+  &lt;CommentTree className="my-comment-tree" ... /&gt;
+&lt;/div&gt;</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">css</span><button class="copy-btn">Copy</button></div>
+        <pre><code>@import "tailwindcss";
+
+.my-comment-tree {
+  --rct-primary: #6366f1;
+  --rct-primary-hover: #4f46e5;
+}</code></pre>
+      </div>
+    </section>
+
+    <section id="state">
+      <h2>State management</h2>
+      <p>The component does not own your comment state. Use React state, Context, Redux, Zustand, TanStack Query, or server components — anything that produces a <code>TComment[]</code>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>const [comments, setComments] = useState&lt;MyComment[]&gt;([]);
+
+&lt;CommentTree comments={comments} ... /&gt;</code></pre>
+      </div>
+      <pre class="diagram">API → update state → comments changes → CommentTree re-renders</pre>
+    </section>
+
+    <section id="api">
+      <h2>API integration</h2>
+      <pre class="diagram">Backend API
+     │
+     ▼
+Your state layer
+     │
+     ▼
+CommentTree
+     │
+     └─▶ Reply · Edit · Like · Dislike
+              │
+              ▼
+          Your API calls</pre>
+      <p>The component doesn't know whether your backend is Node, .NET, Django, Laravel, Firebase, Supabase, or a hand-rolled HTTP service. It receives data and emits callbacks.</p>
+    </section>
+
+    <section id="auth">
+      <h2>Authentication &amp; authorization</h2>
+      <p>Auth lives outside the component. You tell it who's logged in via <code>currentUserId</code>, and it uses that only for UI-level ownership checks.</p>
+      <div class="callout callout-warn">
+        <span class="callout-icon">🔒</span>
+        <p>Hiding Delete in the UI is not authorization. Your backend must enforce ownership on every mutation.</p>
+      </div>
+    </section>
+
+    <section id="validation">
+      <h2>Validation</h2>
+      <p>Trim and reject empty content in your own handler — the component already blocks empty submissions, but you own the final say:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>const handleAddComment = async (content: string) =&gt; {
+  const value = content.trim();
+  if (!value) return;
+  await api.createComment({ content: value });
+};</code></pre>
+      </div>
+    </section>
+
+    <section id="errors">
+      <h2>Error handling</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>const handleReply = async (parent: MyComment, content: string) =&gt; {
+  try {
+    await api.createReply({
+      parentCommentId: parent.commentId,
+      content,
+    });
+    await reloadComments();
+  } catch (error) {
+    console.error("Failed to create reply", error);
+  }
+};</code></pre>
+      </div>
+      <p>If a callback throws, the reply input stays open and the draft is preserved — the user can retry.</p>
+    </section>
+
+    <section id="deletion">
+      <h2>Deletion strategies</h2>
+      <p>The library does not prescribe how deletion works. Common patterns:</p>
+      <ul>
+        <li><strong>Hard delete</strong> — the comment is removed permanently.</li>
+        <li><strong>Soft delete</strong> — mark as deleted, keep the row.</li>
+        <li><strong>Subtree delete</strong> — remove the comment and all descendants (recurse over your flat list).</li>
+        <li><strong>Moderation</strong> — queue for review, hide until approved.</li>
+      </ul>
+    </section>
+
+    <section id="example-api">
+      <h2>Example: API-backed app</h2>
+      <p>A complete integration with <code>fetch</code> for all CRUD operations:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>import { useEffect, useState } from "react";
+import { CommentTree } from "react-comment-tree";
+import "react-comment-tree/style.css";
+
+interface Comment {
+  id: number;
+  parentId: number | null;
+  userId: number;
+  userName: string;
+  avatarUrl?: string;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+  likes: number;
+  dislikes: number;
+}
+
+export default function Comments() {
+  const [comments, setComments] = useState&lt;Comment[]&gt;([]);
+  const currentUserId = 10;
+
+  useEffect(() =&gt; { loadComments(); }, []);
+
+  const loadComments = async () =&gt; {
+    const res = await fetch("/api/comments");
+    setComments(await res.json());
+  };
+
+  const handleAddComment = async (content: string) =&gt; {
+    await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    await loadComments();
+  };
+
+  const handleReply = async (parent: Comment, content: string) =&gt; {
+    await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentId: parent.id, content }),
+    });
+    await loadComments();
+  };
+
+  const handleEdit = async (comment: Comment, content: string) =&gt; {
+    await fetch(`/api/comments/${comment.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    await loadComments();
+  };
+
+  const handleDelete = async (comment: Comment) =&gt; {
+    await fetch(`/api/comments/${comment.id}`, { method: "DELETE" });
+    await loadComments();
+  };
+
+  const handleLike = async (comment: Comment) =&gt; {
+    await fetch(`/api/comments/${comment.id}/like`, { method: "POST" });
+    await loadComments();
+  };
+
+  const handleDislike = async (comment: Comment) =&gt; {
+    await fetch(`/api/comments/${comment.id}/dislike`, { method: "POST" });
+    await loadComments();
+  };
+
+  return (
+    &lt;CommentTree&lt;Comment&gt;
+      className="my-comment-tree"
+      comments={comments}
+      currentUserId={String(currentUserId)}
+
+      accessors={{
+        getId:        (c) =&gt; String(c.id),
+        getParentId:  (c) =&gt; c.parentId === null ? null : String(c.parentId),
+        getAuthor:    (c) =&gt; ({
+          id: String(c.userId),
+          name: c.userName,
+          avatar: c.avatarUrl,
+        }),
+        getContent:   (c) =&gt; c.content,
+        getCreatedAt: (c) =&gt; c.createdAt,
+        getUpdatedAt: (c) =&gt; c.updatedAt,
+        getLikes:     (c) =&gt; c.likes,
+        getDislikes:  (c) =&gt; c.dislikes,
+      }}
+
+      actions={{
+        onAddComment: handleAddComment,
+        onReply:      handleReply,
+        onEdit:       handleEdit,
+        onDelete:     handleDelete,
+        onLike:       handleLike,
+        onDislike:    handleDislike,
+      }}
+    /&gt;
+  );
+}</code></pre>
+      </div>
+    </section>
+
+    <section id="example-minimal">
+      <h2>Minimal integration</h2>
+      <p>If you already have data and callbacks:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>import { CommentTree } from "react-comment-tree";
+import "react-comment-tree/style.css";
+
+&lt;CommentTree&lt;MyComment&gt;
+  className="my-comment-tree"
+  comments={comments}
+  currentUserId={currentUserId}
+
+  accessors={{
+    getId:        (c) =&gt; c.commentId,
+    getParentId:  (c) =&gt; c.parentCommentId,
+    getAuthor:    (c) =&gt; ({ id: c.userId, name: c.userName, avatar: c.userAvatar }),
+    getContent:   (c) =&gt; c.content,
+    getCreatedAt: (c) =&gt; c.createdAt,
+    getUpdatedAt: (c) =&gt; c.updatedAt,
+    getLikes:     (c) =&gt; c.likes,
+    getDislikes:  (c) =&gt; c.dislikes ?? 0,
+  }}
+
+  actions={{
+    onAddComment: handleAddComment,
+    onReply:      handleReply,
+    onEdit:       handleEdit,
+    onDelete:     handleDelete,
+    onLike:       handleLike,
+    onDislike:    handleDislike,
+  }}
+/&gt;</code></pre>
+      </div>
+    </section>
+
+    <section id="exports">
+      <h2>Package exports</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn">Copy</button></div>
+        <pre><code>// Components
+import { CommentTree, CommentItem, CommentInput } from "react-comment-tree";
+
+// Tree utility
+import { buildCommentTree } from "react-comment-tree";
+
+// Relative-time helper used by the default header
+import { timeAgo } from "react-comment-tree";
+
+// Types
+import type {
+  CommentAuthor,
+  CommentTreeProps,
+  NormalizedComment,
+  CommentActionContext,
+  BuildCommentTreeOptions,
+} from "react-comment-tree";
+
+// Stylesheet
+import "react-comment-tree/style.css";</code></pre>
+      </div>
+    </section>
+
+    <section id="typescript">
+      <h2>TypeScript</h2>
+      <p>The component is generic over your comment type. Every accessor and callback receives <code>TComment</code> automatically:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">tsx</span><button class="copy-btn">Copy</button></div>
+        <pre><code>&lt;CommentTree&lt;MyComment&gt;
+  comments={comments}
+  accessors={{ getId: (comment) =&gt; comment.commentId, ... }}
+/&gt;</code></pre>
+      </div>
+    </section>
+
+    <section id="compat">
+      <h2>Compatibility</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Environment</th><th>Supported</th></tr></thead>
+          <tbody>
+            <tr><td>React 18</td><td class="yes">✅</td></tr>
+            <tr><td>React 19</td><td class="yes">✅</td></tr>
+            <tr><td>TypeScript</td><td class="yes">✅</td></tr>
+            <tr><td>SSR</td><td class="yes">✅</td></tr>
+            <tr><td>Modern evergreen browsers</td><td class="yes">✅</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>React and React DOM are peer dependencies — no duplication in your bundle.</p>
+    </section>
+
+    <section id="security">
+      <h2>Security</h2>
+      <p>Comment content is rendered as <strong>text</strong>, never as HTML, so the component itself is not an XSS vector. Your app remains responsible for server-side validation and authorization.</p>
+      <p>The package does not provide authentication, rate limiting, spam protection, or moderation.</p>
+    </section>
+
+    <section id="performance">
+      <h2>Performance</h2>
+      <p>The tree is built from the flat list you supply. For very large threads, consider backend pagination, lazy loading per thread, or virtualization — the component will render whatever you pass it.</p>
+    </section>
+
+    <section id="responsibility">
+      <h2>Responsibility matrix</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Responsibility</th><th style="text-align:center">Library</th><th style="text-align:center">Your app</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Render comment UI</td><td class="yes">✅</td><td></td></tr>
+            <tr><td>Build nested tree</td><td class="yes">✅</td><td></td></tr>
+            <tr><td>Reply / Edit / Like / Dislike UI</td><td class="yes">✅</td><td></td></tr>
+            <tr><td>Sorting UI</td><td class="yes">✅</td><td></td></tr>
+            <tr><td>API requests</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Database</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Authentication</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Authorization</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Persistence</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>ID generation</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Validation</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Moderation / rate limiting</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Pagination</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>Error handling</td><td></td><td class="yes">✅</td></tr>
+            <tr><td>State management</td><td></td><td class="yes">✅</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="development">
+      <h2>Local development</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+        <pre><code>git clone https://github.com/princescript/react-comment-tree.git
+cd react-comment-tree
+npm install
+
+npm run dev        # dev app
+npm test           # watch mode
+npm run test:run   # single run
+npm run build      # build package
+npm run preview    # preview production build</code></pre>
+      </div>
+    </section>
+
+    <section id="testing">
+      <h2>Testing</h2>
+      <p>Vitest + Testing Library + jsdom. Covers tree construction, input behavior, nested rendering, callbacks, editing, replies, likes, dislikes, and deletion.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+        <pre><code>npm run test:run</code></pre>
+      </div>
+    </section>
+
+    <section id="publishing">
+      <h2>Publishing</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+        <pre><code>npm run test:run
+npm run build
+npm pack --dry-run
+npm publish</code></pre>
+      </div>
+    </section>
+
+    <section id="contributing">
+      <h2>Contributing</h2>
+      <ol>
+        <li>Install dependencies.</li>
+        <li>Run the test suite.</li>
+        <li>Build the package.</li>
+        <li>Verify the generated tarball.</li>
+        <li>Keep public APIs backwards compatible where possible.</li>
+        <li>Add tests for behavioural changes.</li>
+      </ol>
+    </section>
+
+    <section id="license">
+      <h2>License</h2>
+      <p><strong>MIT.</strong> See <code>LICENSE</code> for details.</p>
+    </section>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>react-comment-tree · MIT · Built with React &amp; TypeScript</p>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEYWORDS = [
+    'import','from','export','default','const','let','var','function','return',
+    'if','else','for','while','interface','type','extends','implements','new',
+    'this','async','await','try','catch','finally','throw','typeof','instanceof',
+    'in','of','class','null','undefined','true','false','void','as','is','keyof',
+    'readonly','public','private','protected','static','get','set','enum',
+    'declare','namespace','module','yield','delete','switch','case','break',
+    'continue','do'
+  ];
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function highlight(code) {
+    var esc = escapeHtml(code);
+    var kw = KEYWORDS.join('|');
+    var re = new RegExp(
+      '(\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/)' +
+      '|(`[^`]*`|"[^"]*"|\'[^\']*\')' +
+      '|(&lt;\\/?[A-Za-z][\\w.]*)' +
+      '|\\b(' + kw + ')\\b' +
+      '|\\b(\\d+(?:\\.\\d+)?)\\b',
+      'g'
+    );
+    return esc.replace(re, function (m, comment, str, tag, keyword, num) {
+      if (comment) return '<span class="tok-comment">' + comment + '</span>';
+      if (str)     return '<span class="tok-string">'  + str     + '</span>';
+      if (tag)     return '<span class="tok-tag">'     + tag     + '</span>';
+      if (keyword) return '<span class="tok-keyword">' + keyword + '</span>';
+      if (num)     return '<span class="tok-number">'  + num     + '</span>';
+      return m;
+    });
+  }
+
+  function applyHighlighting() {
+    document.querySelectorAll('.code-block pre > code').forEach(function (codeEl) {
+      if (codeEl.dataset.highlighted === 'true') return;
+      var text = codeEl.textContent;
+      codeEl.innerHTML = highlight(text);
+      codeEl.dataset.highlighted = 'true';
+    });
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error('execCommand failed'));
+      } catch (err) { reject(err); }
+    });
+  }
+
+  function flashButton(btn, label) {
+    var original = btn.dataset.originalLabel || btn.textContent;
+    btn.dataset.originalLabel = original;
+    btn.textContent = label;
+    btn.classList.add('copied');
+    clearTimeout(btn._copyTimer);
+    btn._copyTimer = setTimeout(function () {
+      btn.textContent = original;
+      btn.classList.remove('copied');
+    }, 1600);
+  }
+
+  function wireCopyButtons() {
+    document.querySelectorAll('[data-copy-target]').forEach(function (btn) {
+      if (btn.dataset.wired === 'true') return;
+      btn.dataset.wired = 'true';
+      btn.addEventListener('click', function () {
+        var target = document.getElementById(btn.dataset.copyTarget);
+        if (!target) return;
+        copyToClipboard(target.textContent).then(function () {
+          flashButton(btn, 'Copied!');
+        }).catch(function () { flashButton(btn, 'Failed'); });
+      });
+    });
+
+    document.querySelectorAll('.code-block .copy-btn').forEach(function (btn) {
+      if (btn.dataset.wired === 'true') return;
+      btn.dataset.wired = 'true';
+      btn.addEventListener('click', function () {
+        var block = btn.closest('.code-block');
+        var code = block ? block.querySelector('code') : null;
+        if (!code) return;
+        copyToClipboard(code.textContent).then(function () {
+          flashButton(btn, 'Copied!');
+        }).catch(function () { flashButton(btn, 'Failed'); });
+      });
+    });
+  }
+
+  function setupScrollSpy() {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.nav-list a[href^="#"]'));
+    if (!links.length || !('IntersectionObserver' in window)) return;
+
+    var byId = {};
+    links.forEach(function (link) {
+      var id = link.getAttribute('href').slice(1);
+      if (id) byId[id] = link;
+    });
+
+    var sections = Object.keys(byId)
+      .map(function (id) { return document.getElementById(id); })
+      .filter(Boolean);
+
+    if (!sections.length) return;
+
+    var visible = new Set();
+
+    function setActive() {
+      var bestId = null;
+      var bestTop = Infinity;
+      visible.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var top = el.getBoundingClientRect().top;
+        if (top < bestTop) { bestTop = top; bestId = id; }
+      });
+
+      links.forEach(function (l) { l.classList.remove('active'); });
+
+      if (bestId && byId[bestId]) {
+        byId[bestId].classList.add('active');
+        var linkEl = byId[bestId];
+        var sidebar = document.getElementById('sidebar');
+        if (sidebar && sidebar.scrollHeight > sidebar.clientHeight) {
+          var linkRect = linkEl.getBoundingClientRect();
+          var sbRect = sidebar.getBoundingClientRect();
+          if (linkRect.top < sbRect.top || linkRect.bottom > sbRect.bottom) {
+            linkEl.scrollIntoView({ block: 'nearest' });
+          }
+        }
+      }
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var id = entry.target.id;
+        if (entry.isIntersecting) { visible.add(id); }
+        else { visible.delete(id); }
+      });
+      setActive();
+    }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+
+    sections.forEach(function (s) { observer.observe(s); });
+    setActive();
+  }
+
+  function setupMobileMenu() {
+    var toggle = document.getElementById('menuToggle');
+    var sidebar = document.getElementById('sidebar');
+    var backdrop = document.getElementById('backdrop');
+    if (!toggle || !sidebar || !backdrop) return;
+
+    function open() {
+      sidebar.classList.add('open');
+      backdrop.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    function close() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    toggle.addEventListener('click', function () {
+      sidebar.classList.contains('open') ? close() : open();
+    });
+    backdrop.addEventListener('click', close);
+
+    sidebar.querySelectorAll('.nav-list a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        if (window.matchMedia('(max-width: 1024px)').matches) close();
+      });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && sidebar.classList.contains('open')) close();
+    });
+
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 1024 && sidebar.classList.contains('open')) close();
+    });
+  }
+
+  function init() {
+    applyHighlighting();
+    wireCopyButtons();
+    setupScrollSpy();
+    setupMobileMenu();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
